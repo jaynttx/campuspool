@@ -169,10 +169,6 @@ The initial migration is committed (`backend/alembic/versions/0001_initial_schem
 
 ## Deploying
 
-**For free (₹0, no card):** follow [DEPLOY_FREE.md](DEPLOY_FREE.md). It runs the whole app as one Render web service (root `Dockerfile` and `render.yaml`) with a free Neon database and Brevo for sign-in emails, at a free `onrender.com` address. Photos are stored in the database there (`STORAGE_BACKEND=database`) because the free disk is wiped on restart.
-
-**On your own domain** (paid or self-hosted), read on.
-
 The session cookie only travels when the web app and the API share a registrable domain, for example `campuspool.example.com` and `api.campuspool.example.com`. Two free hosts on different domains (say `*.vercel.app` and `*.onrender.com`) will **not** keep students signed in. Get a domain (often a few hundred rupees a year) and point two subdomains at your hosting.
 
 **Production settings (backend environment):**
@@ -186,8 +182,6 @@ CORS_ORIGINS=https://campuspool.example.com
 COOKIE_SECURE=true
 TRUST_PROXY=true
 SMTP_HOST=...  SMTP_PORT=587  SMTP_USER=...  SMTP_PASSWORD=...  SMTP_FROM=CampusPool <no-reply@example.com>
-# or, where SMTP ports are blocked: BREVO_API_KEY=...  MAIL_FROM_EMAIL=you@example.com
-# optional: STORAGE_BACKEND=database (photos in PostgreSQL instead of a disk)
 ADMIN_EMAILS=you@thapar.edu
 ```
 
@@ -220,4 +214,4 @@ Either way: serve both over HTTPS, keep a single backend worker (live updates us
 
 ## What has been checked
 
-`pytest` (36 tests), `npm run test:e2ee` (30 crypto checks), `npm run typecheck`, `npm run lint` and `npm run build` all pass. The full stack was also run on PostgreSQL 16 and driven in real browsers: two students chatting, typing, stickers, emoji, reactions, a GIF from the device, the database holding no readable text, sign out and back in with nothing to type, approving a second laptop and a phone by code, and restoring from a recovery key.
+`pytest` (33 tests), `npm run test:e2ee` (30 crypto checks), `npm run typecheck`, `npm run lint` and `npm run build` all pass. The full stack was also run on PostgreSQL 16 and driven in real browsers: two students chatting, typing, stickers, emoji, reactions, a GIF from the device, the database holding no readable text, sign out and back in with nothing to type, approving a second laptop and a phone by code, and restoring from a recovery key.

@@ -1,14 +1,27 @@
-"""Encrypted chat photos (see storage.py for where they are kept). These helpers delete them."""
+"""Encrypted chat photos live on disk. These helpers find and delete them."""
+
+import os
 
 from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
-from . import storage
+from .config import settings
 from .models import Conversation, Message
 
 
+def chat_dir() -> str:
+    path = os.path.join(settings.upload_dir, "chat")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
 def remove_chat_file(name: str | None) -> None:
-    storage.remove("chat", name)
+    if not name or "/" in name or "\\" in name or name.startswith("."):
+        return
+    try:
+        os.remove(os.path.join(chat_dir(), name))
+    except FileNotFoundError:
+        pass
 
 
 def purge_chat_files(db: Session, user_id: int) -> None:

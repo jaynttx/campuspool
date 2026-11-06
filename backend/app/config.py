@@ -11,16 +11,6 @@ load_dotenv()
 log = logging.getLogger("campuspool")
 
 
-def _database_url(raw: str | None) -> str | None:
-    """Accepts the plain postgres:// or postgresql:// address hosts like Neon show, and uses the psycopg 3 driver."""
-    if not raw:
-        return None
-    for prefix in ("postgres://", "postgresql://"):
-        if raw.startswith(prefix):
-            return "postgresql+psycopg://" + raw[len(prefix):]
-    return raw
-
-
 def _bool(name: str, default: bool) -> bool:
     raw = os.getenv(name)
     return default if raw is None else raw.strip().lower() in {"1", "true", "yes", "on"}
@@ -52,13 +42,7 @@ class Settings:
     smtp_password: str | None
     smtp_from: str | None
     smtp_starttls: bool
-    brevo_api_key: str | None
-    mail_from_email: str | None
-    mail_from_name: str
     upload_dir: str
-    storage_backend: str
-    cleanup_interval_seconds: int
-    cleanup_idle_seconds: int
     max_avatar_bytes: int
     ride_grace_hours: int
     activity_grace_hours: int
@@ -88,7 +72,7 @@ def load_settings() -> Settings:
     dev_regex = r"https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3}):3000"
     return Settings(
         environment=environment,
-        database_url=_database_url(os.getenv("DATABASE_URL")),
+        database_url=os.getenv("DATABASE_URL") or None,
         secret_key=secret,
         cors_origins=[o.strip() for o in origins.split(",") if o.strip()],
         allowed_email_domain=os.getenv("ALLOWED_EMAIL_DOMAIN", "thapar.edu").strip().lower(),
@@ -104,16 +88,7 @@ def load_settings() -> Settings:
         smtp_password=os.getenv("SMTP_PASSWORD") or None,
         smtp_from=os.getenv("SMTP_FROM") or None,
         smtp_starttls=_bool("SMTP_STARTTLS", True),
-        # Email over HTTPS (for hosts that block SMTP ports, such as free Render services).
-        brevo_api_key=os.getenv("BREVO_API_KEY") or None,
-        mail_from_email=os.getenv("MAIL_FROM_EMAIL") or None,
-        mail_from_name=os.getenv("MAIL_FROM_NAME") or "CampusPool",
         upload_dir=os.getenv("UPLOAD_DIR", "uploads"),
-        # "disk" (default) or "database" for hosts whose disk is wiped on restart, such as free Render services.
-        storage_backend=(os.getenv("STORAGE_BACKEND") or "disk").strip().lower(),
-        cleanup_interval_seconds=max(30, int(os.getenv("CLEANUP_INTERVAL_SECONDS", "60"))),
-        # While nobody is using the app, housekeeping runs only this often, so a sleeping database can stay asleep.
-        cleanup_idle_seconds=max(60, int(os.getenv("CLEANUP_IDLE_SECONDS", "1800"))),
         max_avatar_bytes=_int("MAX_AVATAR_BYTES", 2 * 1024 * 1024),
         ride_grace_hours=_int("RIDE_GRACE_HOURS", 12),
         activity_grace_hours=_int("ACTIVITY_GRACE_HOURS", 2),

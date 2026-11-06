@@ -15,7 +15,7 @@ from .ratelimit import allow
 from .realtime import hub
 from .routers.chat import typing_target
 from .routers import activities, admin, auth, chat, e2ee, me, misc, ratings, relations, rides
-from .tasks import cleanup_loop, mark_activity
+from .tasks import cleanup_loop
 
 log = logging.getLogger("campuspool")
 
@@ -26,7 +26,7 @@ async def lifespan(app: FastAPI):
     task = None
     if settings.database_url:
         init_db()
-        task = asyncio.create_task(cleanup_loop(settings.cleanup_interval_seconds))
+        task = asyncio.create_task(cleanup_loop())
     else:
         log.warning("DATABASE_URL is not set: the API starts, but sign-in and data endpoints will fail until it is configured.")
     yield
@@ -54,11 +54,9 @@ app.add_middleware(
 @app.middleware("http")
 async def reject_foreign_origins(request: Request, call_next):
     """Browsers always send Origin on cross-site writes; refuse any that is not ours."""
-    if not request.url.path.startswith("/health"):
-        mark_activity()  # a real visitor: keep housekeeping on its normal schedule
     if request.method not in ("GET", "HEAD", "OPTIONS"):
         origin = request.headers.get("origin")
-        if origin and not origin_allowed(origin, request.headers.get("host")):
+        if origin and not origin_allowed(origin):
             return JSONResponse({"detail": "Origin not allowed."}, status_code=403)
     return await call_next(request)
 
@@ -95,7 +93,7 @@ def _lookup_user_id(token: str | None) -> int | None:
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket) -> None:
     origin = ws.headers.get("origin")
-    if origin and not origin_allowed(origin, ws.headers.get("host")):
+    if origin and not origin_allowed(origin):
         await ws.close(code=1008)
         return
     user_id = await run_in_threadpool(_lookup_user_id, ws.cookies.get(COOKIE))

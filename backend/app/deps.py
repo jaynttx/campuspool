@@ -13,12 +13,8 @@ from .security import hash_token, new_session_token
 COOKIE = "cp_session"
 
 
-def origin_allowed(origin: str, host: str | None = None) -> bool:
-    """A listed origin, or the site itself: when one server answers for both the pages and the API
-    (the single-service setup), the browser's Origin matches the Host it is talking to."""
+def origin_allowed(origin: str) -> bool:
     if origin in settings.cors_origins:
-        return True
-    if host and origin in (f"https://{host}", f"http://{host}") and (origin.startswith("https://") or settings.environment == "development"):
         return True
     return bool(settings.cors_origin_regex and re.fullmatch(settings.cors_origin_regex, origin))
 

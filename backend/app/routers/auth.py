@@ -41,8 +41,7 @@ class VerifyOtpIn(BaseModel):
 
 
 def _expected_delivery() -> str:
-    has_mail = bool(settings.smtp_host or (settings.brevo_api_key and settings.mail_from_email))
-    return "console" if (not has_mail and settings.environment == "development") else "email"
+    return "console" if (not settings.smtp_host and settings.environment == "development") else "email"
 
 
 @router.post("/request-otp")

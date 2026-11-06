@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, LargeBinary, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
@@ -262,15 +262,3 @@ class DeviceLink(Base):
     sealed: Mapped[str | None] = mapped_column(Text, nullable=True)  # chat key sealed to request_key; unreadable by the server
     created_at: Mapped[datetime] = mapped_column(_tz(), default=utcnow)
     expires_at: Mapped[datetime] = mapped_column(_tz(), index=True)
-
-
-class StoredFile(Base):
-    """An uploaded file kept in the database, for hosts without a permanent disk (STORAGE_BACKEND=database)."""
-
-    __tablename__ = "stored_files"
-    __table_args__ = (UniqueConstraint("kind", "name", name="uq_stored_files_kind_name"),)
-    id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    kind: Mapped[str] = mapped_column(String(16))  # "avatars" or "chat"
-    name: Mapped[str] = mapped_column(String(100))
-    data: Mapped[bytes] = mapped_column(LargeBinary)
-    created_at: Mapped[datetime] = mapped_column(_tz(), default=utcnow)

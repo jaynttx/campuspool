@@ -1,14 +1,15 @@
+import os
 import re
 import secrets
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
+from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from .. import storage
 from ..config import settings
 from ..db import get_db
 from ..deps import get_current_user
@@ -24,9 +25,18 @@ _PHONE = re.compile(r"^[0-9+\- ]{0,20}$")
 _FILENAME = re.compile(r"^[A-Za-z0-9_\-]{8,64}\.(jpg|png|webp)$")
 
 
+def _avatar_dir() -> str:
+    path = os.path.join(settings.upload_dir, "avatars")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
 def remove_avatar_file(filename: str) -> None:
     if _FILENAME.match(filename):
-        storage.remove("avatars", filename)
+        try:
+            os.remove(os.path.join(_avatar_dir(), filename))
+        except FileNotFoundError:
+            pass
 
 
 class ProfileUpdate(BaseModel):
@@ -100,7 +110,8 @@ async def upload_avatar(request: Request, user: User = Depends(get_current_user)
 
     def save() -> dict:
         filename = f"{secrets.token_urlsafe(18)}.{ext}"
-        storage.put("avatars", filename, data)
+        with open(os.path.join(_avatar_dir(), filename), "wb") as fh:
+            fh.write(data)
         old = user.avatar_file
         user.avatar_file = filename
         db.commit()
@@ -121,14 +132,14 @@ def delete_avatar(user: User = Depends(get_current_user), db: Session = Depends(
 
 
 @router.get("/avatars/{filename}")
-def get_avatar(filename: str, viewer: User = Depends(get_current_user), db: Session = Depends(get_db)) -> Response:
+def get_avatar(filename: str, viewer: User = Depends(get_current_user), db: Session = Depends(get_db)) -> FileResponse:
     if not _FILENAME.match(filename):
         raise HTTPException(404, "Not found.")
     owner = db.scalar(select(User).where(User.avatar_file == filename))
     if owner is None or (owner.id != viewer.id and not user_settings(owner).get("showPhoto", True)):
         raise HTTPException(404, "Not found.")  # a hidden photo looks the same as a missing one
-    data = storage.get("avatars", filename)
-    if data is None:
+    path = os.path.join(_avatar_dir(), filename)
+    if not os.path.isfile(path):
         raise HTTPException(404, "Not found.")
     media = MIME[filename.rsplit(".", 1)[1]]
-    return Response(content=data, media_type=media, headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=86400"})
+    return FileResponse(path, media_type=media, headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=86400"})

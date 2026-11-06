@@ -1,15 +1,7 @@
-/**
- * Where the API lives. In development it follows the host you opened the page on (port 8000).
- * For a deployed site set NEXT_PUBLIC_API_URL, either to a full address (https://api.example.com)
- * or to a path on the same site (/api) when one server answers for both, as in the free Render setup.
- */
+/** Where the API lives. Set NEXT_PUBLIC_API_URL for a deployed site; in development it follows the host you opened the page on. */
 export function getApiUrl(): string {
   const configured = process.env.NEXT_PUBLIC_API_URL;
-  if (configured) {
-    const trimmed = configured.replace(/\/$/, "");
-    if (trimmed.startsWith("/") && typeof window !== "undefined") return `${window.location.origin}${trimmed}`;
-    return trimmed;
-  }
+  if (configured) return configured.replace(/\/$/, "");
   if (typeof window !== "undefined") return `${window.location.protocol}//${window.location.hostname}:8000`;
   return "http://localhost:8000";
 }

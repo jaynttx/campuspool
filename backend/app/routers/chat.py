@@ -1,3 +1,4 @@
+import os
 import secrets
 from datetime import datetime, timezone
 
@@ -7,7 +8,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.orm import Session
 
-from .. import storage
+from ..chatfiles import chat_dir
 from ..config import settings
 from ..crypto import decrypt_bytes, decrypt_text, encrypt_bytes, encrypt_text
 from ..db import get_db
@@ -236,7 +237,8 @@ async def send_image(convo_id: int, request: Request, user: User = Depends(get_c
         convo = _convo_for(db, convo_id, user)
         other_id = _can_send(db, convo, user)
         name = f"{secrets.token_urlsafe(24)}.enc"
-        storage.put("chat", name, encrypt_bytes(data, f"img:{convo.id}"))  # sealed again at rest, on top of the sender's own encryption
+        with open(os.path.join(chat_dir(), name), "wb") as fh:
+            fh.write(encrypt_bytes(data, f"img:{convo.id}"))  # sealed again at rest, on top of the sender's own encryption
         msg = _store_message(db, convo, user, other_id, envelope, image_file=name)
         return {"id": msg.id}
 
@@ -249,11 +251,12 @@ def get_image(convo_id: int, message_id: int, user: User = Depends(get_current_u
     msg = db.get(Message, message_id)
     if msg is None or msg.conversation_id != convo.id or not msg.image_file:
         raise HTTPException(404, "Photo not found.")
-    sealed = storage.get("chat", msg.image_file)
-    if sealed is None:
+    path = os.path.join(chat_dir(), msg.image_file)
+    if not os.path.isfile(path):
         raise HTTPException(404, "Photo not found.")
     try:
-        data = decrypt_bytes(sealed, f"img:{convo.id}")
+        with open(path, "rb") as fh:
+            data = decrypt_bytes(fh.read(), f"img:{convo.id}")
     except Exception:
         raise HTTPException(404, "Photo not found.") from None
     return Response(content=data, media_type=("application/octet-stream" if msg.e2ee else (msg.image_mime or "application/octet-stream")), headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, max-age=3600"})

@@ -2,7 +2,6 @@
 
 import asyncio
 import logging
-import time
 from datetime import datetime, timedelta, timezone
 
 from fastapi.concurrency import run_in_threadpool
@@ -54,33 +53,8 @@ def run_cleanup() -> dict[str, int]:
     return counts
 
 
-# Monotonic time of the last request from a real visitor (health checks and keep-awake pings do not count).
-_last_activity = 0.0
-
-
-def mark_activity() -> None:
-    global _last_activity
-    _last_activity = time.monotonic()
-
-
-def housekeeping_due(now: float, last_run: float, last_activity: float, interval: int, idle_interval: int) -> bool:
-    """Every `interval` while people use the app; only every `idle_interval` when it has been quiet.
-
-    Hosted databases like Neon sleep when nothing queries them and count the time they are awake, so an idle app
-    should not wake the database every minute just to find nothing to clean.
-    """
-    busy = now - last_activity < max(interval, 20 * 60)
-    return now - last_run >= (interval if busy else idle_interval)
-
-
 async def cleanup_loop(interval_seconds: int = 60) -> None:
-    last_run = float("-inf")
     while True:
-        now = time.monotonic()
-        if not housekeeping_due(now, last_run, _last_activity, interval_seconds, settings.cleanup_idle_seconds):
-            await asyncio.sleep(min(interval_seconds, 60))
-            continue
-        last_run = now
         try:
             counts = await run_in_threadpool(run_cleanup)
             counts["reminders"] = await run_in_threadpool(run_reminders)
@@ -90,4 +64,4 @@ async def cleanup_loop(interval_seconds: int = 60) -> None:
             raise
         except Exception:
             log.exception("Cleanup failed")
-        await asyncio.sleep(min(interval_seconds, 60))
+        await asyncio.sleep(interval_seconds)

@@ -28,8 +28,7 @@ def get_engine() -> Engine:
             # SQLite is used only by the automated tests.
             _engine = create_engine(settings.database_url, connect_args={"check_same_thread": False}, poolclass=StaticPool)
         else:
-            # Hosted databases such as Neon close idle connections; check and recycle them.
-            _engine = create_engine(settings.database_url, pool_pre_ping=True, pool_recycle=300, pool_size=5, max_overflow=5)
+            _engine = create_engine(settings.database_url, pool_pre_ping=True)
         _factory = sessionmaker(bind=_engine, autoflush=False, expire_on_commit=False)
     return _engine
 

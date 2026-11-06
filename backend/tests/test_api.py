@@ -283,9 +283,8 @@ def test_secure_photos_are_stored_and_served_as_ciphertext(make_client, codes):
     assert msg["imageUrl"] and msg["envelope"] == ENVELOPE
     assert a.get(msg["imageUrl"]).content == PHOTO_CIPHERTEXT  # the server hands back exactly what the browser encrypted
 
-    if settings.storage_backend == "disk":
-        stored = os.listdir(os.path.join(settings.upload_dir, "chat"))
-        assert stored and all(open(os.path.join(settings.upload_dir, "chat", f), "rb").read() != PHOTO_CIPHERTEXT for f in stored)
+    stored = os.listdir(os.path.join(settings.upload_dir, "chat"))
+    assert stored and all(open(os.path.join(settings.upload_dir, "chat", f), "rb").read() != PHOTO_CIPHERTEXT for f in stored)
 
     outsider = make_client()
     sign_up(outsider, codes, "img-out@thapar.edu", "Outsider")
