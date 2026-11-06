@@ -1,0 +1,35 @@
+# Render Blueprint: New > Blueprint, pick this repository. Everything runs as one free web service.
+# You will be asked for the values marked sync: false. See DEPLOY_FREE.md.
+services:
+  - type: web
+    name: campuspool
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATA_ENCRYPTION_KEY
+        sync: false
+      - key: BREVO_API_KEY
+        sync: false
+      - key: MAIL_FROM_EMAIL
+        sync: false
+      - key: ADMIN_EMAILS
+        sync: false
+      - key: STORAGE_BACKEND
+        value: database
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: TRUST_PROXY
+        value: "true"
+      - key: CLEANUP_IDLE_SECONDS
+        value: "1800"
+      - key: NEXT_PUBLIC_GIPHY_API_KEY
+        sync: false

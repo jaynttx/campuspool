@@ -1,0 +1,19 @@
+# One address for the whole app: /api/* goes to the FastAPI backend, everything else to the Next.js site.
+# Render (and most hosts) give the container one port in $PORT and handle HTTPS in front of it.
+{
+	admin off
+	auto_https off
+	persist_config off
+}
+
+:{$PORT:10000} {
+	encode zstd gzip
+
+	handle_path /api/* {
+		reverse_proxy 127.0.0.1:8000
+	}
+
+	handle {
+		reverse_proxy 127.0.0.1:3000
+	}
+}

@@ -1,0 +1,50 @@
+# Run everything locally with one command:   docker compose up --build
+# Then open http://localhost:3000. Sign-in codes are printed in the "backend" logs (docker compose logs -f backend).
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: campuspool
+      POSTGRES_PASSWORD: campuspool
+      POSTGRES_DB: campuspool
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U campuspool"]
+      interval: 3s
+      retries: 20
+
+  backend:
+    build: ./backend
+    env_file:
+      - path: ./backend/.env
+        required: false
+    environment:
+      # These win over backend/.env so the containers talk to each other.
+      DATABASE_URL: postgresql+psycopg://campuspool:campuspool@db:5432/campuspool
+      ENVIRONMENT: development
+      AUTO_CREATE_TABLES: "true"
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - uploads:/app/uploads
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Leave empty locally: the app then calls port 8000 on whatever address you opened.
+        NEXT_PUBLIC_API_URL: ""
+        NEXT_PUBLIC_GIPHY_API_KEY: ${NEXT_PUBLIC_GIPHY_API_KEY:-}
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  pgdata:
+  uploads:
